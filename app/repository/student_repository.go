@@ -206,3 +206,36 @@ func isUniqueViolation(err error) bool {
 	}
 	return false
 }
+
+func (r *StudentRepository) FindByUserID(ctx context.Context, userID int) (model.Student, error) {
+	var s model.Student
+	err := r.pool.QueryRow(ctx,
+		`SELECT id, user_id, nim, nama, prodi, angkatan, ipk_terakhir
+		 FROM students WHERE user_id = $1 AND deleted_at IS NULL`, userID,
+	).Scan(&s.ID, &s.UserID, &s.NIM, &s.Nama, &s.Prodi, &s.Angkatan, &s.IPKTerakhir)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return model.Student{}, ErrNotFound
+		}
+		return model.Student{}, fmt.Errorf("mengambil student milik user: %w", err)
+	}
+	return s, nil
+}
+
+func (r *StudentRepository) FindByIDWithSKS(ctx context.Context, id int) (model.Student, error) {
+	s, err := r.FindByID(ctx, id)
+	if err != nil {
+		return model.Student{}, err
+	}
+
+	var totalSKS int
+	if err := r.pool.QueryRow(ctx,
+		`SELECT COALESCE(SUM(c.sks), 0) FROM enrollments e
+		 JOIN courses c ON c.id = e.course_id
+		 WHERE e.student_id = $1`, id,
+	).Scan(&totalSKS); err != nil {
+		return model.Student{}, fmt.Errorf("menghitung total sks: %w", err)
+	}
+	s.TotalSKS = totalSKS
+	return s, nil
+}
