@@ -35,13 +35,11 @@ func (s *AuthService) Login(c *fiber.Ctx) error {
 	user, err := s.users.FindByEmailForLogin(ctx, req.Email)
 	if err != nil {
 		// user tidak ada ATAU password salah membalas pesan yang SAMA,
-		// mencegah user enumeration (pola dari Modul 5).
 		return helper.Fail(c, fiber.StatusUnauthorized, "email atau password salah")
 	}
 	if user.StudentDeleted {
 		// mahasiswa yang sudah di-soft-delete diperlakukan sama seperti
-		// kredensial salah - bukan pesan khusus "akun dinonaktifkan",
-		// supaya tidak membocorkan status akun ke pemanggil anonim.
+		// kredensial salah - bukan pesan khusus "akun dinonaktifkan", supaya tidak membocorkan status akun ke pemanggil anonim.
 		return helper.Fail(c, fiber.StatusUnauthorized, "email atau password salah")
 	}
 	if !helper.VerifyPassword(user.Password, req.Password) {

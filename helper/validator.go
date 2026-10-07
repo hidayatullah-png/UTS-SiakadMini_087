@@ -3,6 +3,7 @@ package helper
 import (
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -17,6 +18,10 @@ func init() {
 			return ""
 		}
 		return name
+	})
+	validate.RegisterValidation("angkatan_valid", func(fl validator.FieldLevel) bool {
+		year := fl.Field().Int()
+		return year >= 1900 && int(year) <= time.Now().Year()
 	})
 }
 
@@ -49,6 +54,8 @@ func messageFor(fe validator.FieldError) string {
 		return "harus " + fe.Param() + " karakter"
 	case "numeric":
 		return "harus berupa angka"
+	case "angkatan_valid":
+		return "angkatan harus 4 digit dan tidak lebih dari tahun berjalan"
 	default:
 		return "tidak valid"
 	}
