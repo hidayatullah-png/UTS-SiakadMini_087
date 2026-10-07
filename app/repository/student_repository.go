@@ -16,10 +16,11 @@ import (
 var (
 	ErrNotFound  = errors.New("data tidak ditemukan")
 	ErrDuplicate = errors.New("data sudah ada")
+	ErrDuplicateNIM   = errors.New("nim sudah terdaftar")
+	ErrDuplicateEmail = errors.New("email sudah terdaftar")
 )
 
 // whitelist kolom sort buat pertahanan terhadap SQL injection
-// di posisi ORDER BY, karena posisi itu gk bisa diparameterkan.
 var kolomUrutStudent = map[string]string{
 	"nama":         "s.nama",
 	"ipk_terakhir": "s.ipk_terakhir",
@@ -58,7 +59,7 @@ func (r *StudentRepository) CreateWithUser(
 	).Scan(&userID)
 	if err != nil {
 		if isUniqueViolation(err) {
-			return model.Student{}, ErrDuplicate // email duplikat
+			return model.Student{}, ErrDuplicateEmail // email duplikat
 		}
 		return model.Student{}, fmt.Errorf("membuat user: %w", err)
 	}
@@ -72,7 +73,7 @@ func (r *StudentRepository) CreateWithUser(
 	).Scan(&s.ID, &s.UserID, &s.NIM, &s.Nama, &s.Prodi, &s.Angkatan, &s.IPKTerakhir)
 	if err != nil {
 		if isUniqueViolation(err) {
-			return model.Student{}, ErrDuplicate // nim duplikat
+			return model.Student{}, ErrDuplicateNIM // nim duplikat
 		}
 		return model.Student{}, fmt.Errorf("membuat student: %w", err)
 	}

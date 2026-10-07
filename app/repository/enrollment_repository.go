@@ -24,7 +24,7 @@ func NewEnrollmentRepository(pool *pgxpool.Pool) *EnrollmentRepository {
 	return &EnrollmentRepository{pool: pool}
 }
 
-// Create 
+// Create
 func (r *EnrollmentRepository) Create(
 	ctx context.Context, studentID, courseID int, tahunAkademik string, batasSKS int,
 ) (model.Enrollment, error) {
@@ -97,7 +97,17 @@ func (r *EnrollmentRepository) FindByID(ctx context.Context, id int) (model.Enro
 	return e, nil
 }
 
-// Delete 
+func (r *EnrollmentRepository) TotalSKS(ctx context.Context, studentID int, tahunAkademik string) (int, error) {
+	var total int
+	err := r.pool.QueryRow(ctx,
+		`SELECT COALESCE(SUM(c.sks), 0) FROM enrollments e
+		 JOIN courses c ON c.id = e.course_id
+		 WHERE e.student_id = $1 AND e.tahun_akademik = $2`,
+		studentID, tahunAkademik).Scan(&total)
+	return total, err
+}
+
+// Delete
 func (r *EnrollmentRepository) Delete(ctx context.Context, id int) error {
 	tag, err := r.pool.Exec(ctx, `DELETE FROM enrollments WHERE id = $1`, id)
 	if err != nil {
