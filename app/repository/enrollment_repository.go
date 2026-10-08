@@ -34,18 +34,25 @@ func (r *EnrollmentRepository) Create(
 	}
 	defer tx.Rollback(ctx)
 
-	// 1) mencegah dua mahasiswa lolos cek kuota bersamaan pada kuota yang tersisa cuma 1.
-	var sks, kuota, terisi int
+	// 1) Kunci baris course. FOR UPDATE tidak boleh dipakai bersama
+	// GROUP BY/agregat, jadi mengunci dan menghitung dipisah.
+	var sks, kuota int
 	err = tx.QueryRow(ctx,
-		`SELECT c.sks, c.kuota, COUNT(e.id)
-		 FROM courses c LEFT JOIN enrollments e ON e.course_id = c.id
-		 WHERE c.id = $1 GROUP BY c.id FOR UPDATE OF c`,
-		courseID).Scan(&sks, &kuota, &terisi)
+		`SELECT sks, kuota FROM courses WHERE id = $1 FOR UPDATE`,
+		courseID).Scan(&sks, &kuota)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return model.Enrollment{}, ErrNotFound
 		}
-		return model.Enrollment{}, fmt.Errorf("mengambil data course: %w", err)
+		return model.Enrollment{}, fmt.Errorf("mengunci data course: %w", err)
+	}
+
+	// Hitung terisi SETELAH kunci didapat, di transaksi yang sama.
+	var terisi int
+	if err := tx.QueryRow(ctx,
+		`SELECT COUNT(*) FROM enrollments WHERE course_id = $1`,
+		courseID).Scan(&terisi); err != nil {
+		return model.Enrollment{}, fmt.Errorf("menghitung kuota terisi: %w", err)
 	}
 	if terisi >= kuota {
 		return model.Enrollment{}, ErrKuotaPenuh

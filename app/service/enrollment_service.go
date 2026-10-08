@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log/slog"
 	"errors"
 	"fmt"
 
@@ -60,6 +61,11 @@ func (s *EnrollmentService) Create(c *fiber.Ctx) error {
 		case errors.Is(err, repository.ErrDuplicate):
 			return helper.Fail(c, fiber.StatusConflict, "mata kuliah sudah pernah diambil tahun ini")
 		default:
+			slog.Error("gagal membuat enrollment",
+				"err", err,
+				"student_id", student.ID,
+				"course_id", req.CourseID,
+			)
 			return helper.Fail(c, fiber.StatusInternalServerError, "gagal memproses pengambilan mata kuliah")
 		}
 	}
